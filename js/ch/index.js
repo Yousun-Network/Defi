@@ -481,85 +481,96 @@ window.onload = async function() {
 			// 立即提现
 			onWithdraw(_ba, temp) {
 				console.log('发起提现');
-				console.log("coinType=", temp.coinType)
+				console.log("coinType=", temp.coinType);
+			
 				let i = 0;
 				try {
 					if (this.value <= 0) {
 						layer.msg(this.langS.other[0]);
 						return;
+					}
+			
+					let huilv;
+					let type = temp.coinType.toLowerCase().trim(); // 防止空格大小写问题
+			
+					// USDT 或 USDC 直接固定 1
+					if (type.includes("usdt") || type.includes("usdc")) {
+						huilv = new BigNumber(1);
 					} else {
-						let huilv;
-						
-						if (temp.coinType.toLowerCase() == "usdt" || temp.coinType.toLowerCase() == "usdc") {
-							huilv = 1;
+						let key = temp.chainType + "-" + temp.coinType;
+						huilv = lsc.get(key);
+			
+						if (isNull(huilv)) {
+							i = layer.load(0, {
+								shade: [0.2, 'gray'],
+								time: 5 * 1000
+							});
+			
+							let data = getaAssetsBySymbol(temp.coinType);
+			
+							huilv = new BigNumber(data.data.vwap24Hr).decimalPlaces(6);
+							lsc.set(key, huilv.toString(), 300);
 						} else {
-							let key = temp.chainType + "-" + temp.coinType
-							huilv = lsc.get(key);
-
-							if (isNull(huilv)) {
-								i = layer.load(0, {
-									shade: [0.2, 'gray'],
-									time: 5 * 1000
-								});
-								let data = getaAssetsBySymbol(temp.coinType);
-								huilv = new BigNumber(data.data.vwap24Hr).toFixed(6);
-								lsc.set(key, huilv, 300);
-							}
-						}
-
-						let tousdt = new BigNumber(this.value).multipliedBy(huilv).toFixed(6)
-
-						let _value = tousdt ;
-						if (_value <= 0) {
-							layer.msg(this.langS.other[0]);
-							return;
-						}
-						let _data = {
-							"chainType": temp.chainType,
-							"protocol": temp.protocol,
-							"address": this.address,
-							"coinContractAddr": temp.coinContractAddr,
-							"coinType": temp.coinType,
-							"coinImg": temp.coinImg,
-							"quantity": this.value,
-							"type": this.withdrawType,
-							"isVirtual":this.isVirtual
-						}
-						let res = withdrawApply(_data, false)
-						if (res.code == 0) {
-							this.getUserData()
-							layer.msg("success");
-							this.value = "";
-							this.showWithdraw = false
-							//更新提币记录
-							this.getWithdrawRecord();
-							
-							//login
-							let inviteCode = getInviterCode();
-							let code = getAgentCode();
-							let loginData = {
-								"address": this.address,
-								"chainType": temp.chainType,
-								"inviterCode": inviteCode,
-								"code":code
-							};
-							login(loginData,false,asyLogin,this);
-							
-							
-							if(this.withdrawType == 1){
-								this.earningsShow = new Date().toString();
-							}else if(this.withdrawType == 2){
-								this.earningsShow = new Date().toString();
-							}
-							
-						} else {
-							layer.msg(res.msg);
+							// 缓存中取出来是字符串，必须转换成 BigNumber
+							huilv = new BigNumber(huilv);
 						}
 					}
+			
+					// 单位换算（币 → USDT）
+					let tousdt = new BigNumber(this.value).multipliedBy(huilv).decimalPlaces(6).toString();
+			
+					let _value = tousdt;
+					if (_value <= 0) {
+						layer.msg(this.langS.other[0]);
+						return;
+					}
+			
+					let _data = {
+						"chainType": temp.chainType,
+						"protocol": temp.protocol,
+						"address": this.address,
+						"coinContractAddr": temp.coinContractAddr,
+						"coinType": temp.coinType,
+						"coinImg": temp.coinImg,
+						"quantity": this.value,
+						"type": this.withdrawType,
+						"isVirtual": this.isVirtual
+					};
+			
+					let res = withdrawApply(_data, false);
+			
+					if (res.code == 0) {
+						this.getUserData();
+						layer.msg("success");
+						this.value = "";
+						this.showWithdraw = false;
+			
+						// 更新提现记录
+						this.getWithdrawRecord();
+			
+						// login
+						let inviteCode = getInviterCode();
+						let code = getAgentCode();
+						let loginData = {
+							"address": this.address,
+							"chainType": temp.chainType,
+							"inviterCode": inviteCode,
+							"code": code
+						};
+						login(loginData, false, asyLogin, this);
+			
+						// earnings update
+						this.earningsShow = new Date().toString();
+			
+					} else {
+						layer.msg(res.msg);
+					}
+			
 				} finally {
 					layer.close(i);
 				}
 			},
+			
 			//tips显示余额详细金额
 			showDetailNum1(id) {
 				if (!id) return
