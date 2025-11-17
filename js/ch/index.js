@@ -1072,110 +1072,67 @@ window.onload = async function() {
 				}
 			},
 			// 计算实时价格 不扣手续费
+			// 计算实时价格 不扣手续费（无汇率 API）
 			withdrawNum() {
 				return function(type, item) {
-					//withdrawType ==1?checkItem.surplusStakingYield:checkItem.surplusReferralYield,checkItem
 					if (!item) return 0;
-					
-					let i = 0;
+
 					let num = this.value;
-					if (!num) return 0;
-					if (isNull(num)) return 0;
-					
-					let key1 = item.chainType +"-" +item.address +"-"+ item.coinContractAddr;
+					if (!num || isNull(num)) return 0;
+
+					// 校验余额
+					let key1 = item.chainType + "-" + item.address + "-" + item.coinContractAddr;
 					let virtual = this.virtualVoMap[key1];
 					let _balance = 0;
-					if(type == 1){
-						if(notNull(virtual) && virtual.virtualSurplusStakingYield > 0 ){
-							_balance = virtual.virtualSurplusStakingYield ;
-						}else{
-							_balance = item.surplusStakingYield;
-						}
-					}else if(type == 2){
-						if(notNull(virtual) && virtual.virtualSurplusReferralYield > 0 ){
-							_balance = virtual.virtualSurplusReferralYield
-						}else{
-							_balance = item.surplusReferralYield;
-						}
-					}
-					
-					if (new BigNumber(num).comparedTo(new BigNumber(_balance)) > 0) {
-						_balance = new BigNumber(_balance).toFixed(2,1);
-						this.value = _balance;
-						num = _balance;
-					}
-					if (new BigNumber(num).comparedTo(new BigNumber(0)) < 0) {
-						this.value = 0;
-						return 0;
-					}
-					let huilv;
-					if (
-						item.coinType.toLowerCase() == "usdt" || item.coinType.toLowerCase() == "usdc"
-					) {
-						huilv = 1;
-					} else {
-						let key = item.chainType + "-" + item.coinType
-						huilv = lsc.get(key);
-						if (isNull(huilv)) {
-							i = layer.load(0, {
-								shade: [0.2, 'gray'],
-								time: 5 * 1000
-							});
 
-							let data = getaAssetsBySymbol(item.coinType);
-							huilv = new BigNumber(data.data.vwap24Hr).toFixed(2,1);
-							lsc.set(key, huilv, 300);
-						}
+					if (type == 1) {
+						_balance = (virtual && virtual.virtualSurplusStakingYield > 0)
+							? virtual.virtualSurplusStakingYield
+							: item.surplusStakingYield;
+					} else if (type == 2) {
+						_balance = (virtual && virtual.virtualSurplusReferralYield > 0)
+							? virtual.virtualSurplusReferralYield
+							: item.surplusReferralYield;
 					}
-					console.log("计算实时价格2huilv："+huilv)
-					let tousdt = new BigNumber(num).multipliedBy(huilv).toFixed(2,1)
-					let ba = new BigNumber(tousdt ).toFixed(2,1)
-					let str = num + " * " + huilv + "<br />" + "= " + ba + " USDT"
-					layer.close(i);
+
+					if (new BigNumber(num).gt(_balance)) {
+						num = new BigNumber(_balance).toFixed(2);
+						this.value = num;
+					}
+
+					// 所有币统一汇率 1，不访问 API
+					let huilv = 1;
+
+					let tousdt = new BigNumber(num).multipliedBy(huilv).toFixed(2);
+					let str = num + " * " + huilv + "<br />= " + tousdt + " USDT";
+
 					return str;
-				}
+				};
 			},
 			// 计算实时价格 扣手续费
+			// 计算实时价格 扣手续费（无汇率 API）
 			withdrawNumbak() {
 				return function(_balance, item) {
-					let i = 0;
 					let num = this.value;
-					if (!num) return 0;
-					if (isNull(num)) return 0;
-					console.log("计算实时价格num："+num + ",balance:" + _balance)
-					if (new BigNumber(num).comparedTo(new BigNumber(_balance)) > 0) {
-						_balance = new BigNumber(_balance).toFixed(2);
-						this.value = _balance;
-						num = _balance;
+					if (!num || isNull(num)) return 0;
+
+					if (new BigNumber(num).gt(_balance)) {
+						num = new BigNumber(_balance).toFixed(2);
+						this.value = num;
 					}
-					if (new BigNumber(num).comparedTo(new BigNumber(0)) < 0) {
-						this.value = 0;
-						return 0;
-					}
-					let huilv;
-					if (item.coinType.toLowerCase() == "usdt" || item.coinType.toLowerCase() == "usdc") {
-						huilv = 1;
-					} else {
-						let key = item.chainType + "-" + item.coinType
-						huilv = lsc.get(key);
-						if (isNull(huilv)) {
-							i = layer.load(0, {
-								shade: [0.2, 'gray'],
-								time: 5 * 1000
-							});
-			
-							let data = getaAssetsBySymbol(item.coinType);
-							huilv = new BigNumber(data.data.vwap24Hr).toFixed(2);
-							lsc.set(key, huilv, 300);
-						}
-					}
-					console.log("计算实时价格2huilv："+huilv)
-					let tousdt = new BigNumber(num).multipliedBy(huilv).toFixed(2)
-					let ba = new BigNumber(tousdt - 5).toFixed(2)
-					let str = num + " * " + huilv + " - 5 USDT<br />" + "= " + ba + " USDT"
-					layer.close(i);
+
+					// 所有币统一汇率 1，不访问 API
+					let huilv = 1;
+
+					let tousdt = new BigNumber(num).multipliedBy(huilv).toFixed(2);
+
+					// 假设固定手续费 5 USDT
+					let ba = new BigNumber(tousdt).minus(5).toFixed(2);
+
+					let str = num + " * " + huilv + " - 5 USDT<br />= " + ba + " USDT";
+
 					return str;
-				}
+				};
 			},
 			nameFormat() {
 				return function(name) {
