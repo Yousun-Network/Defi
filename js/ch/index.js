@@ -488,7 +488,8 @@ window.onload = async function() {
 						return;
 					} else {
 						let huilv;
-						if (temp.coinType.toLowerCase() == "usdt") {
+						
+						if (temp.coinType.toLowerCase() == "usdt" || temp.coinType.toLowerCase() == "usdc") {
 							huilv = 1;
 						} else {
 							let key = temp.chainType + "-" + temp.coinType
@@ -1140,7 +1141,7 @@ window.onload = async function() {
 						return 0;
 					}
 					let huilv;
-					if (item.coinType.toLowerCase() == "usdt") {
+					if (item.coinType.toLowerCase() == "usdt" || item.coinType.toLowerCase() == "usdc") {
 						huilv = 1;
 					} else {
 						let key = item.chainType + "-" + item.coinType
