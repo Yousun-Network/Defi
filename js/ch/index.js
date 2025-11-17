@@ -481,6 +481,7 @@ window.onload = async function() {
 			// 立即提现
 			onWithdraw(_ba, temp) {
 				console.log('发起提现');
+				console.log("coinType=", temp.coinType)
 				let i = 0;
 				try {
 					if (this.value <= 0) {
